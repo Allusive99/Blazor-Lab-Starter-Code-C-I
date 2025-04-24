@@ -1,7 +1,9 @@
 ﻿namespace Blazor_Lab_Starter_Code {
 	class Program {
 
-		static List<Book> books = new List<Book>();
+        // Testing GitHub Actions trigger
+
+        static List<Book> books = new List<Book>();
 		static List<User> users = new List<User>();
 		static Dictionary<User, List<Book>> borrowedBooks = new Dictionary<User, List<Book>>();
 
