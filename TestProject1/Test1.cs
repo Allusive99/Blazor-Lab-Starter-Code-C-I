@@ -52,7 +52,7 @@ namespace TestProject1
             var books = service.GetBooks();
 
             // Assert
-            Assert.AreEqual(2, books.Count);
+            Assert.AreEqual(3, books.Count);
             Assert.AreEqual("Book A", books[0].Title);
         }
 
