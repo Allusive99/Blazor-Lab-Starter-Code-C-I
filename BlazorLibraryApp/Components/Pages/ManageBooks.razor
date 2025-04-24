@@ -1,0 +1,143 @@
+﻿@page "/manage-books"
+@rendermode InteractiveServer
+@using BlazorLibraryApp.Models
+@using BlazorLibraryApp.Services
+@inject ILibraryService LibraryService
+
+<h3>Manage Books</h3>
+
+<button @onclick="LoadBooks" class="btn btn-outline-primary mb-3">Reload Books</button>
+
+<EditForm Model="@newBook" OnValidSubmit="AddBook">
+    <div class="mb-2">
+        <InputText @bind-Value="newBook.Title" class="form-control" placeholder="Title" />
+    </div>
+    <div class="mb-2">
+        <InputText @bind-Value="newBook.Author" class="form-control" placeholder="Author" />
+    </div>
+    <div class="mb-2">
+        <InputText @bind-Value="newBook.ISBN" class="form-control" placeholder="ISBN" />
+    </div>
+    <button type="submit" class="btn btn-primary">Add Book</button>
+</EditForm>
+
+<table class="table mt-4">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>ISBN</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in books)
+        {
+            <tr>
+                <td>@book.Id</td>
+                <td>
+                    @if (editingBook?.Id == book.Id)
+                    {
+                        <InputText @bind-Value="editingBook.Title" class="form-control" />
+                    }
+                    else
+                    {
+                        @book.Title
+                    }
+                </td>
+                <td>
+                    @if (editingBook?.Id == book.Id)
+                    {
+                        <InputText @bind-Value="editingBook.Author" class="form-control" />
+                    }
+                    else
+                    {
+                        @book.Author
+                    }
+                </td>
+                <td>
+                    @if (editingBook?.Id == book.Id)
+                    {
+                        <InputText @bind-Value="editingBook.ISBN" class="form-control" />
+                    }
+                    else
+                    {
+                        @book.ISBN
+                    }
+                </td>
+                <td>
+                    @if (editingBook?.Id == book.Id)
+                    {
+                        <button class="btn btn-success btn-sm me-1" @onclick="SaveEdit">Save</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning btn-sm me-1" @onclick="@(() => StartEdit(book))">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteBook(book.Id))">Delete</button>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<Book> books = new();
+    private Book newBook = new();
+    private Book? editingBook;
+
+    protected override void OnInitialized()
+    {
+        LoadBooks();
+    }
+
+    private void LoadBooks()
+    {
+        books = LibraryService.GetBooks();
+        Console.WriteLine("Loading latest Books.csv...");
+        LibraryService.ReadBooks();
+        books = LibraryService.GetBooks();
+        Console.WriteLine($"Books loaded: {books.Count}");
+    }
+
+    private void AddBook()
+    {
+        LibraryService.AddBook(newBook);
+        newBook = new(); // reset form
+        LoadBooks();
+    }
+
+    private void StartEdit(Book book)
+    {
+        editingBook = new Book
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                ISBN = book.ISBN
+            };
+    }
+
+    private void SaveEdit()
+    {
+        if (editingBook is not null)
+        {
+            LibraryService.EditBook(editingBook);
+            editingBook = null;
+            LoadBooks();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingBook = null;
+    }
+
+    private void DeleteBook(int id)
+    {
+        LibraryService.DeleteBook(id);
+        LoadBooks();
+    }
+}

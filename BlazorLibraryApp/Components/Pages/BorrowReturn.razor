@@ -1,0 +1,158 @@
+﻿@page "/borrow-return"
+@rendermode InteractiveServer
+@using BlazorLibraryApp.Models
+@using BlazorLibraryApp.Services
+@inject ILibraryService LibraryService
+
+<h3>Borrow / Return Books</h3>
+
+<div class="mb-3">
+    <label for="userSelect">Select User:</label>
+    <select id="userSelect" class="form-control" @bind="selectedUserId">
+        <option value="">-- Select a User --</option>
+        @foreach (var user in users)
+        {
+            <option value="@user.Id">@user.Name (@user.Email)</option>
+        }
+    </select>
+</div>
+
+<div class="mb-3">
+    <label for="bookSelect">Select Book to Borrow:</label>
+    <select id="bookSelect" class="form-control" @bind="selectedBookId">
+        <option value="">-- Select a Book --</option>
+        @foreach (var book in availableBooks)
+        {
+            <option value="@book.Id">@book.Title by @book.Author</option>
+        }
+    </select>
+</div>
+
+<button class="btn btn-primary mb-4" @onclick="BorrowBook" disabled="@(!CanBorrow)">Borrow Book</button>
+
+@if (selectedUser != null && borrowedBooks.ContainsKey(selectedUser.Id) && borrowedBooks[selectedUser.Id].Any())
+{
+    <h4>Books Borrowed by @selectedUser.Name</h4>
+    <ul class="list-group mb-4">
+        @foreach (var book in borrowedBooks[selectedUser.Id])
+        {
+            <li class="list-group-item d-flex justify-content-between">
+                <span>
+                    <strong>@book.Title</strong> by @book.Author (ISBN: @book.ISBN)
+                </span>
+                <button class="btn btn-sm btn-danger" @onclick="() => ReturnBook(book.Id, selectedUser.Id)">Return</button>
+            </li>
+        }
+    </ul>
+}
+
+@if (borrowedBooks.Any(b => b.Value.Count > 0))
+{
+    <h4>All Borrowed Books</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Author</th>
+                <th>ISBN</th>
+                <th>Borrowed By</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in borrowedBooks)
+            {
+                var user = users.FirstOrDefault(u => u.Id == entry.Key);
+                if (user != null)
+                {
+                    foreach (var book in entry.Value)
+                    {
+                        <tr>
+                            <td>@book.Title</td>
+                            <td>@book.Author</td>
+                            <td>@book.ISBN</td>
+                            <td>@user.Name (@user.Email)</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" @onclick="() => ReturnBook(book.Id, user.Id)">Return</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<User> users = new();
+    private List<Book> availableBooks = new();
+
+    private int selectedUserId;
+    private int selectedBookId;
+
+    private User? selectedUser;
+    private Dictionary<int, List<Book>> borrowedBooks = new();
+
+    protected override void OnInitialized()
+    {
+        LibraryService.ReadUsers();
+        LibraryService.ReadBooks();
+
+        users = LibraryService.GetUsers();
+        availableBooks = LibraryService.GetBooks();
+
+        borrowedBooks = LibraryService.ReadBorrowedBooks();
+
+        foreach (var borrowed in borrowedBooks.Values.SelectMany(b => b).ToList())
+        {
+            var match = availableBooks.FirstOrDefault(b => b.Id == borrowed.Id);
+            if (match != null)
+            {
+                availableBooks.Remove(match);
+            }
+        }
+    }
+
+    private bool CanBorrow => selectedUserId > 0 && selectedBookId > 0;
+
+    private void BorrowBook()
+    {
+        selectedUser = users.FirstOrDefault(u => u.Id == selectedUserId);
+        var bookToBorrow = availableBooks.FirstOrDefault(b => b.Id == selectedBookId);
+
+        if (selectedUser != null && bookToBorrow != null)
+        {
+            if (!borrowedBooks.ContainsKey(selectedUser.Id))
+            {
+                borrowedBooks[selectedUser.Id] = new List<Book>();
+            }
+
+            borrowedBooks[selectedUser.Id].Add(bookToBorrow);
+            availableBooks.Remove(bookToBorrow);
+            selectedBookId = 0;
+
+            LibraryService.WriteBorrowedBooks(borrowedBooks);
+            LibraryService.RemoveBookFromFile(bookToBorrow.Id); // Remove from Books.csv
+        }
+    }
+
+    private void ReturnBook(int bookId, int userId)
+    {
+        var user = users.FirstOrDefault(u => u.Id == userId);
+
+        if (user != null && borrowedBooks.ContainsKey(user.Id))
+        {
+            var borrowed = borrowedBooks[user.Id];
+            var bookToReturn = borrowed.FirstOrDefault(b => b.Id == bookId);
+
+            if (bookToReturn != null)
+            {
+                borrowed.Remove(bookToReturn);
+                availableBooks.Add(bookToReturn);
+
+                LibraryService.WriteBorrowedBooks(borrowedBooks);
+                LibraryService.AddBookToFile(bookToReturn); // Add back to Books.csv
+            }
+        }
+    }
+}

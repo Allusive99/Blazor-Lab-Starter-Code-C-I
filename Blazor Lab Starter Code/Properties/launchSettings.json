@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "Blazor Lab Starter Code": {
+      "commandName": "Project"
+    },
+    "WSL": {
+      "commandName": "WSL2",
+      "distributionName": ""
+    }
+  }
+}

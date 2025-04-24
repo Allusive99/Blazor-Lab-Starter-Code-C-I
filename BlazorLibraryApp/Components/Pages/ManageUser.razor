@@ -1,0 +1,125 @@
+﻿@page "/manage-users"
+@rendermode InteractiveServer
+@using BlazorLibraryApp.Models
+@using BlazorLibraryApp.Services
+@inject ILibraryService LibraryService
+
+<h3>Manage Users</h3>
+
+<button @onclick="LoadUsers" class="btn btn-outline-primary mb-3">Reload Users</button>
+
+<EditForm Model="@newUser" OnValidSubmit="AddUser">
+    <div class="mb-2">
+        <InputText @bind-Value="newUser.Name" class="form-control" placeholder="Name" />
+    </div>
+    <div class="mb-2">
+        <InputText @bind-Value="newUser.Email" class="form-control" placeholder="Email" />
+    </div>
+    <button type="submit" class="btn btn-primary">Add User</button>
+</EditForm>
+
+<table class="table mt-4">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in users)
+        {
+            <tr>
+                <td>@user.Id</td>
+                <td>
+                    @if (editingUser?.Id == user.Id)
+                    {
+                        <InputText @bind-Value="editingUser.Name" class="form-control" />
+                    }
+                    else
+                    {
+                        @user.Name
+                    }
+                </td>
+                <td>
+                    @if (editingUser?.Id == user.Id)
+                    {
+                        <InputText @bind-Value="editingUser.Email" class="form-control" />
+                    }
+                    else
+                    {
+                        @user.Email
+                    }
+                </td>
+                <td>
+                    @if (editingUser?.Id == user.Id)
+                    {
+                        <button class="btn btn-success btn-sm me-1" @onclick="SaveEdit">Save</button>
+                        <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning btn-sm me-1" @onclick="@(() => StartEdit(user))">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="@(() => DeleteUser(user.Id))">Delete</button>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private List<User> users = new();
+    private User newUser = new();
+    private User? editingUser;
+
+    protected override void OnInitialized()
+    {
+        LoadUsers();
+    }
+
+    private void LoadUsers()
+    {
+        LibraryService.ReadUsers();
+        users = LibraryService.GetUsers();
+    }
+
+    private void AddUser()
+    {
+        LibraryService.AddUser(newUser);
+        newUser = new();
+        LoadUsers();
+    }
+
+    private void StartEdit(User user)
+    {
+        editingUser = new User
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email
+            };
+    }
+
+    private void SaveEdit()
+    {
+        if (editingUser is not null)
+        {
+            LibraryService.EditUser(editingUser);
+            editingUser = null;
+            LoadUsers();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingUser = null;
+    }
+
+    private void DeleteUser(int id)
+    {
+        LibraryService.DeleteUser(id);
+        LoadUsers();
+    }
+}
