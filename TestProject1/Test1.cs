@@ -50,7 +50,7 @@ namespace TestProject1
             // Act
             service!.ReadBooks();
             var books = service.GetBooks();
-
+            // Testing workflow trigger
             // Assert
             Assert.AreEqual(2, books.Count);
             Assert.AreEqual("Book A", books[0].Title);
